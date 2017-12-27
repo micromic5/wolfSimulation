@@ -16,7 +16,7 @@ public class wolf : MonoBehaviour {
     [SerializeField]
     private int aggression;
     [SerializeField]
-    //The order of the Group members is the hirarchie
+    //The order of the Group members is the hirarchie or maybe not
     private GameObject[] group;
 
     private bool pregnant = false;
@@ -26,6 +26,8 @@ public class wolf : MonoBehaviour {
     private GameObject[] parents;
     private GameObject[] oldRelations;
 
+    private enum States {idl, changeTerritory, fight, procreate, snuffling, dead};
+    private States state = States.idl;
     public wolf()
     {
     }
@@ -35,6 +37,35 @@ public class wolf : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
+        //get older
+        switch (state)
+        {
+            case States.idl:
+                //if not hungry and max hp wolf gets strogner
+                //if hp not ful recover hp
+                break;
+            case States.changeTerritory:
+                //change the group of this wolf and the other wolfs
+                //navigation mesh go to new group
+                break;
+            case States.fight:
+                //calculate fighting power maybe survive with dmg
+                state = States.idl;
+                //or
+                state = States.dead;
+                break;
+            case States.procreate:
+                //create new Object after intervall
+                break;
+            case States.snuffling:
+                //if not successfull start fight
+                state = States.fight;
+                //if successfull add new group member
+                state = States.idl;
+                break;
+            case States.dead:
+                //destroy object
+                break;
+        }
 	}
 }
