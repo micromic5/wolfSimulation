@@ -13,7 +13,7 @@ public class territoryStartDetection : MonoBehaviour {
 	void Update () {
 		if(wolfsInterritory.Count > 0)
         {
-            this.GetComponentInParent<territory>().setWolfsInTerritory(wolfsInterritory);
+          //  this.GetComponentInParent<territory>().setWolfsInTerritory(wolfsInterritory);
             Destroy(gameObject);
         }
 	}
