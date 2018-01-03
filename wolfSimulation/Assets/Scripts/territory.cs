@@ -10,6 +10,9 @@ public class territory : MonoBehaviour {
     // Use this for initialization
     public List<GameObject> wolfsInterritory = new List<GameObject>();
     private bool updateTerritory = false;
+    //color of the wolfs of this territory
+    public Material color;
+
 	void Start () {
        /* RaycastHit[] wolfs = Physics.BoxCastAll(
             new Vector3(transform.position.x, transform.position.y, transform.position.z),
@@ -38,6 +41,7 @@ public class territory : MonoBehaviour {
         {
             if (comp.tag == "Wolf")
             {
+                other.GetComponent<MeshRenderer>().material = color;
                 wolfsInterritory.Add(comp.gameObject);
             }
         }
