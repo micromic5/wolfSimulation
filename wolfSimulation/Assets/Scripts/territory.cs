@@ -39,6 +39,7 @@ public class territory : MonoBehaviour {
         {
             if (comp.tag == "Wolf")
             {
+                comp.GetComponent<wolf>().territory = gameObject;
                 wolfsInterritory.Add(comp.gameObject);
             }
         }

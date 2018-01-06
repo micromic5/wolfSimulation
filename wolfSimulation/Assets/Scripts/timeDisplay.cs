@@ -4,7 +4,7 @@ using UnityEngine;
 using System;
 
 public class timeDisplay : MonoBehaviour {
-    private float time = 0;
+    public static float time = 360;
     private float oldtime = 0;
     public static bool dayChanged = false;
 
