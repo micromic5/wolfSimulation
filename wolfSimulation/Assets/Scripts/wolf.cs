@@ -15,9 +15,6 @@ public class wolf : MonoBehaviour {
     private int strengh;
     [SerializeField]
     private int aggression;
-    [SerializeField]
-    //The order of the Group members is the hirarchie or maybe not
-    private GameObject[] group;
 
     private bool pregnant = false;
     private GameObject partner;
