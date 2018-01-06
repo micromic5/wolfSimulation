@@ -10,8 +10,10 @@ public class territory : MonoBehaviour {
     // Use this for initialization
     public List<GameObject> wolfsInterritory = new List<GameObject>();
     private bool updateTerritory = false;
-
+    private float timeStart;
+    private bool startTime = true;
 	void Start () {
+        timeStart = timeDisplay.time;
        /* RaycastHit[] wolfs = Physics.BoxCastAll(
             new Vector3(transform.position.x, transform.position.y, transform.position.z),
             new Vector3(transform.localScale.x/2, transform.localScale.y/2, transform.localScale.z/2),
@@ -39,7 +41,16 @@ public class territory : MonoBehaviour {
         {
             if (comp.tag == "Wolf")
             {
-                comp.GetComponent<wolf>().territory = gameObject;
+                if(startTime && timeDisplay.time - timeStart > 3)
+                {
+                    startTime = false;
+                }
+                if (!startTime)
+                {
+                    comp.GetComponent<wolf>().newGroup = wolfsInterritory[0].GetComponent<wolf>().group;
+                    comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
+                }
+                comp.GetComponent<wolf>().territory = gameObject;                
                 wolfsInterritory.Add(comp.gameObject);
             }
         }

@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class group : MonoBehaviour {
 
-    public GameObject[] currentGroup;
-
+    public List<GameObject> currentGroup = new List<GameObject>();
+    public Color color;
     // Use this for initialization
     void Start () {
         //color of the wolfs of this territory
-        Color color = Random.ColorHSV(0f, 1f, 1f, 1f, 0.1f, 1f);
+        color = Random.ColorHSV(0f, 1f, 1f, 1f, 0.1f, 1f);
         foreach (GameObject colorWolf in currentGroup)
         {
             colorWolf.GetComponentInChildren<Renderer>().material.color = color;
