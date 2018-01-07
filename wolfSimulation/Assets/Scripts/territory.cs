@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class territory : MonoBehaviour {
     //1 is the value one wolf needs per day
-    public int food = 100;
+    public int food = 20;
+    public int maximumFood = 150;
     //1 means it regenerates 1 food value per day
     public int regenerationRate = 0;
     // Use this for initialization
@@ -47,6 +48,7 @@ public class territory : MonoBehaviour {
                 }
                 if (!startTime)
                 {
+                    comp.GetComponent<wolf>().territory = gameObject;
                     comp.GetComponent<wolf>().newGroup = wolfsInterritory[0].GetComponent<wolf>().group;
                     comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
                 }
@@ -80,9 +82,19 @@ public class territory : MonoBehaviour {
     {
         if (updateTerritory)
         {
-            food -= wolfsInterritory.Count;
-            food += regenerationRate;
+            food -= food>0?wolfsInterritory.Count:0;
+            food += food<maximumFood?regenerationRate:0;
             updateTerritory = false;
+            if (food < wolfsInterritory.Count && regenerationRate < wolfsInterritory.Count)
+            {
+                for (int i = 0; i < regenerationRate; i++)
+                {
+                    int luckyWolf = Random.Range(0, wolfsInterritory.Count);
+                    wolfsInterritory[luckyWolf].GetComponent<wolf>().inceraseHP();
+                    int hunger = wolfsInterritory[luckyWolf].GetComponent<wolf>().hunger;
+                    wolfsInterritory[luckyWolf].GetComponent<wolf>().hunger -= (hunger > 0) ? 1 : 0;
+                }
+            }            
         }
     }
 }
