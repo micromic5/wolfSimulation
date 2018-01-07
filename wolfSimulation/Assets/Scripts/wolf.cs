@@ -6,6 +6,8 @@ public class wolf : MonoBehaviour {
     [SerializeField]
     private int hp;
     [SerializeField]
+    private int maxHp = 20;
+    [SerializeField]
     private bool isMale;
     [SerializeField]
     private int age;
@@ -25,20 +27,21 @@ public class wolf : MonoBehaviour {
     public List<GameObject> parents;
     public GameObject[] oldRelations;
     public bool withParents = true;
-
+    
     private enum States {idl, changeTerritory, fight, procreate, snuffling, dead};
     private States state = States.idl;
     private bool updateWolf = false;
     private int lastYear = 0;
     private bool yearPassed = false;
-    
+    private wolf enemy;
+
     public wolf()
     {
     }
 
     public void inceraseHP()
     {
-        if (hp < 100)
+        if (hp < maxHp)
         {
             hp++;
         }
@@ -96,11 +99,8 @@ public class wolf : MonoBehaviour {
                     //navigation mesh go to new group
                     break;
                 case States.fight:
-                    //calculate fighting power maybe survive with dmg
-                    // state = States.idl;
-                    //or
-                    //state = States.dead;
-                    state = States.idl;
+                    enemy = null;
+                    fight();
                     break;
                 case States.procreate:
                     //create new Object after intervall
@@ -115,13 +115,56 @@ public class wolf : MonoBehaviour {
                     break;
                 case States.dead:
                     Debug.Log(gameObject.name + " dieded");
-                    gameObject.GetComponent<Renderer>().enabled = false;
                     //destroy object
                     break;
             }
             yearPassed = false;
         }
     }
+    
+    //fight
+    private void fight()
+    {
+        //find strongest enemy             
+        foreach (GameObject newGroupMember in newGroup.currentGroup)
+        {
+            if (enemy == null)
+            {
+                enemy = newGroupMember.GetComponent<wolf>();
+            }
+            else
+            {
+                enemy = (enemy.strengh + enemy.hp) <
+                    newGroupMember.GetComponent<wolf>().strengh +
+                    newGroupMember.GetComponent<wolf>().hp ?
+                    newGroupMember.GetComponent<wolf>() :
+                    enemy;
+            }
+        }
+        int enemyFightPower = Random.Range(0, 10) + enemy.strengh + enemy.hp;
+        int currentWolfFightPower = Random.Range(0, 10) + strengh + hp;
+        if (currentWolfFightPower >= enemyFightPower)
+        {   //implement chance survival with lower hp
+            enemy.state = States.dead;
+            //lower the winners hp
+            int dmg = Random.Range(0, enemy.strengh + enemy.hp);
+            hp = hp < dmg ? 2 : hp - dmg;
+            //reset hunger, maybe eat the dead wolf don't know if that happens
+            hunger = 0;
+            changeGroup();
+            state = States.idl;
+        }//implement chance survival with lower hp and go back to the old group
+        else
+        {
+            state = States.dead;
+            //lower the winners hp
+            int dmg = Random.Range(0, strengh + hp);
+            enemy.hp = enemy.hp < dmg ? 2 : enemy.hp - dmg;
+            //reset hunger, maybe eat the dead wolf don't know if that happens
+            enemy.hunger = 0;
+        }
+    }
+
     //decide if territory should be changed
     private void changeTerritoryDecision()
     {        
@@ -162,6 +205,26 @@ public class wolf : MonoBehaviour {
         }
     }
 
+    //succesful integrated into a new group
+    private void changeGroup()
+    {
+        newGroup.currentGroup.Add(gameObject);
+        //on Territory change forget about the former partner
+        if (partner != null)
+        {
+            partner.GetComponent<wolf>().partner = null;
+            partner = null;
+        }
+        group.currentGroup.Remove(gameObject);
+        group = newGroup;
+        GetComponentInChildren<Renderer>().material.color = newGroup.color;
+        state = States.idl;
+        newGroup = null;
+        withParents = false;
+        //search for new Partner in the new Group
+        findPartner();
+    }
+
     //determin if acceptet in a new group or a fight starts
     private void makeContact()
     {
@@ -174,21 +237,11 @@ public class wolf : MonoBehaviour {
             ageIndicator);
         if (true)
         {
-            newGroup.currentGroup.Add(gameObject);
-            //on Territory change forget about the former partner
-            if (partner != null)
-            {
-                partner.GetComponent<wolf>().partner = null;
-                partner = null;
-            }
-            group.currentGroup.Remove(gameObject);
-            group = newGroup;
-            GetComponentInChildren<Renderer>().material.color = newGroup.color;
-            state = States.idl;
-            newGroup = null;
-            withParents = false;
-            //search for new Partner in the new Group
-            findPartner();
+            changeGroup();
+        }
+        else
+        {
+            state = States.fight;
         }
         /*else
         {
@@ -250,7 +303,7 @@ public class wolf : MonoBehaviour {
                                 {
                                     wolfScript.partner = gameObject;
                                     gameObject.GetComponent<wolf>().partner = w;
-                                    Debug.Log(gameObject.name + "  possiblePartner: " + w.name);
+                                   // Debug.Log(gameObject.name + "  possiblePartner: " + w.name);
                                 }
                             }
                         }
@@ -269,7 +322,7 @@ public class wolf : MonoBehaviour {
                         || territory.GetComponent<territory>().regenerationRate >= territory.GetComponent<territory>().wolfsInterritory.Count
                         )
         {
-            if (hp < 100)
+            if (hp < maxHp)
             {
                 hp++;
             }
