@@ -10,7 +10,7 @@ public class wolf : MonoBehaviour {
     [SerializeField]
     private bool isMale;
     [SerializeField]
-    private int age;
+    public int age;
     [SerializeField]
     public int hunger;
     [SerializeField]
@@ -18,13 +18,17 @@ public class wolf : MonoBehaviour {
     [SerializeField]
     private int aggression;
 
+    public GameObject prefab;
     public bool pregnant = false;
+    private GameObject father = null;
+    private int pregnancyTime = 0;
+    private int lastTimePregnant = 0;
     public GameObject partner;
     public GameObject territory;
     public group group;
     public group newGroup;
-    public GameObject[] children;
-    public List<GameObject> parents;
+    public List<GameObject> children;
+    public GameObject[] parents = new GameObject[2];
     public GameObject[] oldRelations;
     public bool withParents = true;
     
@@ -73,13 +77,53 @@ public class wolf : MonoBehaviour {
                     age++;
                 }
             }
+            if (pregnant)
+            {
+                pregnancyTime++;               
+            }
             switch (state)
             {
                 case States.idl:                   
-                    feed();
-                    changeTerritoryDecision();
-                    //on year change check if possible partner is in group which is not a brother or sister or parent
-                    if (yearPassed)
+                    feed();                    
+                    //can't change territory if the wolf is pregnant
+                    if (!pregnant)
+                    {
+                        changeTerritoryDecision();
+                        //decide if wolf should get pregnant
+                        if (isMale == false && partner != null && lastTimePregnant+50 < (int)Mathf.Floor(timeDisplay.time))
+                        {
+                            //if enough food
+                            if (territory.GetComponent<territory>().food > group.currentGroup.Count * 2)
+                            {
+                                //every day chance of 1% to get pregnant,20days chance of 18%, every year chance of 97.5%
+                                if (Random.Range(0, 100) == 0)
+                                {
+                                    pregnant = true;
+                                    father = partner;
+                                }
+                            }//not enough food
+                            else
+                            {
+                                //every day chance of 0.2% to get pregnant,20days chance of 4%, every year chance of 51.84%
+                                if (Random.Range(0, 500) == 0)
+                                {
+                                    pregnant = true;
+                                    father = partner;
+                                }
+                            }
+                        }
+                    }else
+                    {
+                        //giving birth
+                        if(pregnancyTime > 65)
+                        {
+                            if(Random.Range(0, 3)==0){
+                                givBirth();
+                            }
+                        }
+                    }
+                    //on year change check if possible partner is in group which is not a brother or sister or parent and the wolf is not pregnant
+                    if (yearPassed && !pregnant)
                     {
                         findPartner();
                     }
@@ -166,10 +210,53 @@ public class wolf : MonoBehaviour {
         }
     }
 
+    private void givBirth()
+    {
+        pregnant = false;
+        pregnancyTime = 0;
+        lastTimePregnant = (int)Mathf.Floor(timeDisplay.time);
+        int childCount = Random.Range(1, 7);
+        for (int i = 0; i < childCount; i++)
+        {
+            GameObject newWolf = Instantiate(prefab, new Vector3(transform.position.x + Random.Range(0, 10), 0,
+                transform.position.z + Random.Range(0, 10)), Quaternion.identity);
+            wolf wolfScript = newWolf.GetComponent<wolf>();
+            wolfScript.hp = 20;
+            wolfScript.maxHp = 20;
+            wolfScript.isMale = Random.Range(0, 2) == 1;
+            wolfScript.age = 0;
+            wolfScript.hunger = 0;            
+            wolfScript.strengh = 0;
+            wolfScript.aggression = 0;
+            wolfScript.prefab = prefab;
+            wolfScript.pregnant = false;
+            wolfScript.partner = null;
+            wolfScript.group = group;
+            group.currentGroup.Add(newWolf);
+            wolfScript.newGroup = null;
+            wolfScript.children = null;
+            wolfScript.parents[0] = gameObject;
+            wolfScript.parents[1] = father;            
+            wolfScript.withParents = true;
+            wolfScript.state = States.idl;
+            wolfScript.children = new List<GameObject>();
+            //calculate new strengh
+            int strenghRandomness = Random.Range(0, 10) - 5;
+            if ((strengh + father.GetComponent<wolf>().strengh) / 2 + strenghRandomness > 0)
+            {
+                wolfScript.strengh = (strengh + father.GetComponent<wolf>().strengh) / 2 + strenghRandomness;
+            }
+            //instantiate new wolf
+            newWolf.GetComponentInChildren<Renderer>().material.color = group.color;
+            children.Add(newWolf);
+        }
+        father = null;
+    }
+
     //fight
     private void fight()
     {
-        if(newGroup.currentGroup.Count <= 0)
+        if(newGroup.currentGroup.Count > 0)
         {
             //find strongest enemy             
             foreach (GameObject newGroupMember in newGroup.currentGroup)
@@ -200,7 +287,6 @@ public class wolf : MonoBehaviour {
                 //reset hunger, maybe eat the dead wolf don't know if that happens
                 hunger = 0;
                 changeGroup();
-                state = States.idl;
             }//could implement chance survival with lower hp and go back to the old group
             else
             {
@@ -271,10 +357,10 @@ public class wolf : MonoBehaviour {
         }
         group.currentGroup.Remove(gameObject);
         group = newGroup;
-        GetComponentInChildren<Renderer>().material.color = newGroup.color;
-        state = States.idl;
+        GetComponentInChildren<Renderer>().material.color = newGroup.color;        
         newGroup = null;
         withParents = false;
+        state = States.idl;
         //search for new Partner in the new Group
         findPartner();
     }
@@ -375,7 +461,7 @@ public class wolf : MonoBehaviour {
                                 }
                             }
                             //check for brothers and sisters
-                            if (parents.Count > 0)
+                            if (parents[0] != null)
                             {
                                 foreach (GameObject c in parents[0].GetComponent<wolf>().children)
                                 {
@@ -385,6 +471,16 @@ public class wolf : MonoBehaviour {
                                     }
                                 }
                             }
+                            if (parents[1] != null)
+                            {
+                                foreach (GameObject c in parents[1].GetComponent<wolf>().children)
+                                {
+                                    if (w == c)
+                                    {
+                                        skip = true;
+                                    }
+                                }
+                            }                            
                             if (!skip)
                             {
                                 if (Random.Range(0, 2) == 1)

@@ -31,7 +31,10 @@ public class territory : MonoBehaviour {
                 if (!startTime)
                 {
                     comp.GetComponent<wolf>().territory = gameObject;
-                    comp.GetComponent<wolf>().newGroup = group;
+                    if (comp.GetComponent<wolf>().age > 0)
+                    {
+                        comp.GetComponent<wolf>().newGroup = group;
+                    }
                     comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
                 }
                 comp.GetComponent<wolf>().territory = gameObject;                
