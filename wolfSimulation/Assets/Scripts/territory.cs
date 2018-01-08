@@ -24,17 +24,17 @@ public class territory : MonoBehaviour {
         {
             if (comp.tag == "Wolf" && comp.GetComponent<wolf>().state != wolf.States.outOfGame)
             {
-                if(startTime && timeDisplay.time - timeStart > 3)
+                if(startTime && timeDisplay.time - timeStart > 10)
                 {
                     startTime = false;
                 }
                 if (!startTime)
                 {
-                    comp.GetComponent<wolf>().territory = gameObject;
-                    if (comp.GetComponent<wolf>().age > 0)
-                    {
+                   // comp.GetComponent<wolf>().territory = gameObject;
+                  /*  if (comp.GetComponent<wolf>().age > 0)
+                    {*/
                         comp.GetComponent<wolf>().newGroup = group;
-                    }
+                  //  }
                     comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
                 }
                 comp.GetComponent<wolf>().territory = gameObject;                

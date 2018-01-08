@@ -26,19 +26,20 @@ public class wolf : MonoBehaviour {
     public GameObject partner;
     public GameObject territory;
     public group group;
-    public group newGroup;
+    public group newGroup = null;
     public List<GameObject> children;
     public GameObject[] parents = new GameObject[2];
     public GameObject[] oldRelations;
     public bool withParents = true;
     
-    public enum States {idl, changeTerritory, fight, procreate, snuffling, dead, outOfGame};
+    public enum States {idl, changeTerritory, fight, snuffling, dead, outOfGame};
     public States state = States.idl;
     private bool updateWolf = false;
     private int lastYear = 0;
     private bool yearPassed = false;
     private wolf enemy;
     private wolf aggressionWolf;
+    private bool newborn = false;
     public wolf()
     {
     }
@@ -84,7 +85,18 @@ public class wolf : MonoBehaviour {
             switch (state)
             {
                 case States.idl:                   
-                    feed();                    
+                    feed();         
+                    //check if groups are set correct
+                    if(newGroup != null)
+                    {
+                        group = newGroup;
+                        if (!newGroup.currentGroup.Contains(gameObject))
+                        {
+                            newGroup.currentGroup.Add(gameObject);
+                        }
+                        newGroup = null;
+                        GetComponentInChildren<Renderer>().material.color = group.color;
+                    }     
                     //can't change territory if the wolf is pregnant
                     if (!pregnant)
                     {
@@ -178,9 +190,6 @@ public class wolf : MonoBehaviour {
                     enemy = null;
                     fight();
                     break;
-                case States.procreate:
-                    //create new Object after intervall
-                    break;
                 case States.snuffling:
                     feed();
                     //wait until wolf is in new territory
@@ -233,6 +242,9 @@ public class wolf : MonoBehaviour {
             wolfScript.partner = null;
             wolfScript.group = group;
             group.currentGroup.Add(newWolf);
+            wolfScript.territory = territory;
+            territory.GetComponent<territory>().wolfsInterritory.Add(newWolf);
+            newWolf.GetComponent<navigation>().target = territory.GetComponent<territory>().GetComponentInChildren<Transform>();
             wolfScript.newGroup = null;
             wolfScript.children = null;
             wolfScript.parents[0] = gameObject;
@@ -240,6 +252,7 @@ public class wolf : MonoBehaviour {
             wolfScript.withParents = true;
             wolfScript.state = States.idl;
             wolfScript.children = new List<GameObject>();
+            wolfScript.newborn = true;
             //calculate new strengh
             int strenghRandomness = Random.Range(0, 10) - 5;
             if ((strengh + father.GetComponent<wolf>().strengh) / 2 + strenghRandomness > 0)
@@ -256,47 +269,56 @@ public class wolf : MonoBehaviour {
     //fight
     private void fight()
     {
-        if(newGroup.currentGroup.Count > 0)
+        if (newGroup.currentGroup.Count > 0)
         {
             //find strongest enemy             
             foreach (GameObject newGroupMember in newGroup.currentGroup)
             {
-                if (enemy == null)
+                if (newGroupMember.GetComponent<wolf>().state == States.idl)
                 {
-                    enemy = newGroupMember.GetComponent<wolf>();
-                }
-                else
-                {
-                    enemy = (enemy.strengh + enemy.hp + enemy.aggression * 2) <
-                        newGroupMember.GetComponent<wolf>().strengh +
-                        newGroupMember.GetComponent<wolf>().hp +
-                        newGroupMember.GetComponent<wolf>().aggression * 2 ?
-                        newGroupMember.GetComponent<wolf>() :
-                        enemy;
+                    if (enemy == null)
+                    {
+                        enemy = newGroupMember.GetComponent<wolf>();
+                    }
+                    else
+                    {
+                        enemy = (enemy.strengh + enemy.hp + enemy.aggression * 2) <
+                            newGroupMember.GetComponent<wolf>().strengh +
+                            newGroupMember.GetComponent<wolf>().hp +
+                            newGroupMember.GetComponent<wolf>().aggression * 2 ?
+                            newGroupMember.GetComponent<wolf>() :
+                            enemy;
+                    }
                 }
             }
-            int enemyFightPower = Random.Range(0, 10) + enemy.strengh + enemy.hp;
-            int currentWolfFightPower = Random.Range(0, 10) + strengh + hp;
-            if (currentWolfFightPower >= enemyFightPower)
-            {   //implement chance survival with lower hp
-                enemy.state = States.dead;
-                Debug.Log(enemy + " :death through fight i am the defender");
-                //lower the winners hp
-                int dmg = Random.Range(0, enemy.strengh + enemy.hp);
-                hp = hp < dmg ? 2 : hp - dmg;
-                //reset hunger, maybe eat the dead wolf don't know if that happens
-                hunger = 0;
-                changeGroup();
-            }//could implement chance survival with lower hp and go back to the old group
-            else
+            if (enemy != null)
             {
-                state = States.dead;
-                Debug.Log(gameObject + " :death through fight, i am the invader");
-                //lower the winners hp
-                int dmg = Random.Range(0, strengh + hp);
-                enemy.hp = enemy.hp < dmg ? 2 : enemy.hp - dmg;
-                //reset hunger, maybe eat the dead wolf don't know if that happens
-                enemy.hunger = 0;
+                int enemyFightPower = Random.Range(0, 10) + enemy.strengh + enemy.hp;
+                int currentWolfFightPower = Random.Range(0, 10) + strengh + hp;
+                if (currentWolfFightPower >= enemyFightPower)
+                {   //implement chance survival with lower hp
+                    enemy.state = States.dead;
+                    Debug.Log(enemy + " :death through fight i am the defender");
+                    //lower the winners hp
+                    int dmg = Random.Range(0, enemy.strengh + enemy.hp);
+                    hp = hp < dmg ? 2 : hp - dmg;
+                    //reset hunger, maybe eat the dead wolf don't know if that happens
+                    hunger = 0;
+                    changeGroup();
+                }//could implement chance survival with lower hp and go back to the old group
+                else
+                {
+                    state = States.dead;
+                    Debug.Log(gameObject + " :death through fight, i am the invader");
+                    //lower the winners hp
+                    int dmg = Random.Range(0, strengh + hp);
+                    enemy.hp = enemy.hp < dmg ? 2 : enemy.hp - dmg;
+                    //reset hunger, maybe eat the dead wolf don't know if that happens
+                    enemy.hunger = 0;
+                }
+            }else
+            {
+                changeGroup();
             }
         }
         else
@@ -362,7 +384,10 @@ public class wolf : MonoBehaviour {
         withParents = false;
         state = States.idl;
         //search for new Partner in the new Group
-        findPartner();
+        if (age > 0)
+        {
+            findPartner();
+        }
     }
 
     //determin if acceptet in a new group or a fight starts
