@@ -22,7 +22,7 @@ public class territoryStartDetection : MonoBehaviour {
     {
         foreach(Transform comp in other.GetComponentsInParent<Transform>())
         {
-            if(comp.tag == "Wolf")
+            if(comp.tag == "Wolf" && comp.GetComponent<wolf>().state !=  wolf.States.outOfGame)
             {
                 wolfsInterritory.Add(comp.gameObject);
             }

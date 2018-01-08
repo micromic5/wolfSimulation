@@ -4,14 +4,15 @@ using UnityEngine;
 using System;
 
 public class timeDisplay : MonoBehaviour {
-    public static float time = 360;
+    public static float time = 1;
     private float oldtime = 0;
     public static bool dayChanged = false;
-
+    public int timeMultiplikator = 1;
 	// Use this for initialization
 	void Start () {
-		
-	}
+        Time.timeScale = timeMultiplikator;
+        Time.fixedDeltaTime *= Time.timeScale;
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -20,7 +21,7 @@ public class timeDisplay : MonoBehaviour {
 
     private void FixedUpdate()
     {
-        time+=Time.deltaTime;
+        time+=Time.fixedDeltaTime;
         if(Math.Floor(time) != Math.Floor(oldtime))
         {
             dayChanged = true;

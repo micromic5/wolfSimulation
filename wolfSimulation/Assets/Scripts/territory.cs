@@ -10,37 +10,19 @@ public class territory : MonoBehaviour {
     public int regenerationRate = 0;
     // Use this for initialization
     public List<GameObject> wolfsInterritory = new List<GameObject>();
+    public group group;
     private bool updateTerritory = false;
     private float timeStart;
     private bool startTime = true;
 	void Start () {
         timeStart = timeDisplay.time;
-       /* RaycastHit[] wolfs = Physics.BoxCastAll(
-            new Vector3(transform.position.x, transform.position.y, transform.position.z),
-            new Vector3(transform.localScale.x/2, transform.localScale.y/2, transform.localScale.z/2),
-            new Vector3(transform.position.x, transform.position.y, transform.position.z)
-        );
-        Debug.Log(wolfs.Length);
-        foreach(RaycastHit wolf in wolfs)
-        {
-            Debug.Log(wolf.transform.position);
-            if (wolf.transform.parent != null)
-            {
-                Debug.Log(wolf.transform.parent.name);
-            }
-        }*/
 	}
-
-   /* public void setWolfsInTerritory(List<GameObject> wolfs)
-    {
-       // this.wolfsInterritory = wolfs;
-    }*/
 
     private void OnTriggerEnter(Collider other)
     {
         foreach (Transform comp in other.GetComponentsInParent<Transform>())
         {
-            if (comp.tag == "Wolf")
+            if (comp.tag == "Wolf" && comp.GetComponent<wolf>().state != wolf.States.outOfGame)
             {
                 if(startTime && timeDisplay.time - timeStart > 3)
                 {
@@ -49,7 +31,7 @@ public class territory : MonoBehaviour {
                 if (!startTime)
                 {
                     comp.GetComponent<wolf>().territory = gameObject;
-                    comp.GetComponent<wolf>().newGroup = wolfsInterritory[0].GetComponent<wolf>().group;
+                    comp.GetComponent<wolf>().newGroup = group;
                     comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
                 }
                 comp.GetComponent<wolf>().territory = gameObject;                
@@ -62,7 +44,7 @@ public class territory : MonoBehaviour {
     {
         foreach (Transform comp in other.GetComponentsInParent<Transform>())
         {
-            if (comp.tag == "Wolf")
+            if (comp.tag == "Wolf" && comp.GetComponent<wolf>().state != wolf.States.outOfGame)
             {
 
                 wolfsInterritory.Remove(comp.gameObject);

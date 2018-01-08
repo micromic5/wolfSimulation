@@ -28,13 +28,13 @@ public class wolf : MonoBehaviour {
     public GameObject[] oldRelations;
     public bool withParents = true;
     
-    private enum States {idl, changeTerritory, fight, procreate, snuffling, dead};
-    private States state = States.idl;
+    public enum States {idl, changeTerritory, fight, procreate, snuffling, dead, outOfGame};
+    public States state = States.idl;
     private bool updateWolf = false;
     private int lastYear = 0;
     private bool yearPassed = false;
     private wolf enemy;
-
+    private wolf aggressionWolf;
     public wolf()
     {
     }
@@ -68,7 +68,10 @@ public class wolf : MonoBehaviour {
             {
                 lastYear = (int)Mathf.Floor(timeDisplay.time);
                 yearPassed = true;
-                age++;
+                if (state != States.outOfGame)
+                {
+                    age++;
+                }
             }
             switch (state)
             {
@@ -79,6 +82,35 @@ public class wolf : MonoBehaviour {
                     if (yearPassed)
                     {
                         findPartner();
+                    }
+                    //chance to die from sickness higher in the first 2 years
+                    if(age <= 2)
+                    {
+                        //   0.1369863% every day, 63.23727% chance to die in 2 years from sickness, slightly better chances if strengh is high
+                        if (Random.Range(0, 730+strengh*10) == 0)
+                        {
+                            state = States.dead;
+                            Debug.Log(gameObject + " :death through sickness younger than 2");
+                        }
+                    }
+                    else
+                    {
+                        //   0.01369863% every day, 39.34% chance to die in 10 years from sickness
+                        if (Random.Range(0, 7300) == 0)
+                        {
+                            state = States.dead;
+                            Debug.Log(gameObject + " :death through sickness older than 2");
+                        }
+                    }
+                    //chance to die from age
+                    if(age > 10)
+                    {
+                        //  0.2% every day, 51,84% every year, 88,83% every 3 years to die from sickness
+                        if (Random.Range(0, 500) == 0)
+                        {
+                            state = States.dead;
+                            Debug.Log(gameObject + " :death from age in the age of :"+age);
+                        }
                     }
                     break;
                 case States.changeTerritory:
@@ -114,54 +146,76 @@ public class wolf : MonoBehaviour {
                     }
                     break;
                 case States.dead:
-                    Debug.Log(gameObject.name + " dieded");
+                    //Debug.Log(gameObject.name + " dieded");
+                    if (partner != null)
+                    {
+                        partner.GetComponent<wolf>().partner = null;
+                        partner = null;
+                    }
+                    group.currentGroup.Remove(gameObject);
+                    territory.GetComponent<territory>().wolfsInterritory.Remove(gameObject);
+                    Destroy(transform.Find("Cube").gameObject);
+                    state = States.outOfGame;
+                    hp = 0;
                     //destroy object
+                    break;
+                case States.outOfGame:
                     break;
             }
             yearPassed = false;
         }
     }
-    
+
     //fight
     private void fight()
     {
-        //find strongest enemy             
-        foreach (GameObject newGroupMember in newGroup.currentGroup)
+        if(newGroup.currentGroup.Count <= 0)
         {
-            if (enemy == null)
+            //find strongest enemy             
+            foreach (GameObject newGroupMember in newGroup.currentGroup)
             {
-                enemy = newGroupMember.GetComponent<wolf>();
+                if (enemy == null)
+                {
+                    enemy = newGroupMember.GetComponent<wolf>();
+                }
+                else
+                {
+                    enemy = (enemy.strengh + enemy.hp + enemy.aggression * 2) <
+                        newGroupMember.GetComponent<wolf>().strengh +
+                        newGroupMember.GetComponent<wolf>().hp +
+                        newGroupMember.GetComponent<wolf>().aggression * 2 ?
+                        newGroupMember.GetComponent<wolf>() :
+                        enemy;
+                }
             }
+            int enemyFightPower = Random.Range(0, 10) + enemy.strengh + enemy.hp;
+            int currentWolfFightPower = Random.Range(0, 10) + strengh + hp;
+            if (currentWolfFightPower >= enemyFightPower)
+            {   //implement chance survival with lower hp
+                enemy.state = States.dead;
+                Debug.Log(enemy + " :death through fight i am the defender");
+                //lower the winners hp
+                int dmg = Random.Range(0, enemy.strengh + enemy.hp);
+                hp = hp < dmg ? 2 : hp - dmg;
+                //reset hunger, maybe eat the dead wolf don't know if that happens
+                hunger = 0;
+                changeGroup();
+                state = States.idl;
+            }//could implement chance survival with lower hp and go back to the old group
             else
             {
-                enemy = (enemy.strengh + enemy.hp) <
-                    newGroupMember.GetComponent<wolf>().strengh +
-                    newGroupMember.GetComponent<wolf>().hp ?
-                    newGroupMember.GetComponent<wolf>() :
-                    enemy;
+                state = States.dead;
+                Debug.Log(gameObject + " :death through fight, i am the invader");
+                //lower the winners hp
+                int dmg = Random.Range(0, strengh + hp);
+                enemy.hp = enemy.hp < dmg ? 2 : enemy.hp - dmg;
+                //reset hunger, maybe eat the dead wolf don't know if that happens
+                enemy.hunger = 0;
             }
         }
-        int enemyFightPower = Random.Range(0, 10) + enemy.strengh + enemy.hp;
-        int currentWolfFightPower = Random.Range(0, 10) + strengh + hp;
-        if (currentWolfFightPower >= enemyFightPower)
-        {   //implement chance survival with lower hp
-            enemy.state = States.dead;
-            //lower the winners hp
-            int dmg = Random.Range(0, enemy.strengh + enemy.hp);
-            hp = hp < dmg ? 2 : hp - dmg;
-            //reset hunger, maybe eat the dead wolf don't know if that happens
-            hunger = 0;
-            changeGroup();
-            state = States.idl;
-        }//implement chance survival with lower hp and go back to the old group
         else
         {
-            state = States.dead;
-            //lower the winners hp
-            int dmg = Random.Range(0, strengh + hp);
-            enemy.hp = enemy.hp < dmg ? 2 : enemy.hp - dmg;
-            //reset hunger, maybe eat the dead wolf don't know if that happens
-            enemy.hunger = 0;
+            changeGroup();
         }
     }
 
@@ -228,27 +282,61 @@ public class wolf : MonoBehaviour {
     //determin if acceptet in a new group or a fight starts
     private void makeContact()
     {
-        //needs some tuning
-        int ageIndicator = age <= 3 ? -1 : 1;
-        //check how high possibility for a fight is
-        float acceptingParameter = Random.Range(0,
-            100 - territory.GetComponent<territory>().food +
-            newGroup.currentGroup.Count +
-            ageIndicator);
-        if (true)
+        //check if territory is free
+        if (newGroup.currentGroup.Count <= 0)
         {
             changeGroup();
         }
         else
         {
-            state = States.fight;
+            //determin the aggression of the new group  
+            int groupAggressionLevel = 0;
+            foreach (GameObject wolfAgressor in newGroup.currentGroup)
+            {
+                groupAggressionLevel += wolfAgressor.GetComponent<wolf>().aggression;
+            }
+            //territory regenerates not enough for one more wolf or the territory has more wolfs than food
+            //the aggression of the new group is 5 times higher
+            if (newGroup.currentGroup.Count < territory.GetComponent<territory>().regenerationRate ||
+                territory.GetComponent<territory>().food < newGroup.currentGroup.Count)
+            {
+                groupAggressionLevel *= 5;
+            }
+            //when the wolf is young his chances to get a place in the new gorup are higher
+            if (age <= 3)
+            {
+                if (Random.Range(0, 100 + groupAggressionLevel) <= 75)
+                {
+                    changeGroup();
+                }
+                else
+                {
+                    state = States.fight;
+                }
+            }
+            else if (age <= 7)
+            {
+                if (Random.Range(0, 100 + groupAggressionLevel) <= 50)
+                {
+                    changeGroup();
+                }
+                else
+                {
+                    state = States.fight;
+                }
+            }
+            else
+            {
+                if (Random.Range(0, 100 + groupAggressionLevel) <= 25)
+                {
+                    changeGroup();
+                }
+                else
+                {
+                    state = States.fight;
+                }
+            }
         }
-        /*else
-        {
-            state = States.fight;
-        }*/
-        //parameter die ganze zeit viel zu hoch
-        //Debug.Log(acceptingParameter);
     }
 
     //search for a partner inside the group
@@ -336,6 +424,7 @@ public class wolf : MonoBehaviour {
                 if (hp <= 0)
                 {
                     state = States.dead;
+                    Debug.Log(gameObject + " :death through hunger");
                 }
             }
             else
