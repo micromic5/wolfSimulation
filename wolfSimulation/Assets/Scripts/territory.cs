@@ -47,7 +47,7 @@ public class territory : MonoBehaviour {
     {
         foreach (Transform comp in other.GetComponentsInParent<Transform>())
         {
-            if (comp.tag == "Wolf" && comp.GetComponent<wolf>().state != wolf.States.outOfGame)
+            if (comp.tag == "Wolf")
             {
 
                 wolfsInterritory.Remove(comp.gameObject);

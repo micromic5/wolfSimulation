@@ -22,7 +22,7 @@ public class wolf : MonoBehaviour {
     public bool pregnant = false;
     private GameObject father = null;
     private int pregnancyTime = 0;
-    private int lastTimePregnant = 0;
+    private int lastTimePregnant = -300;
     public GameObject partner;
     public GameObject territory;
     public group group;
@@ -40,6 +40,7 @@ public class wolf : MonoBehaviour {
     private wolf enemy;
     private wolf aggressionWolf;
     private bool newborn = false;
+    private static int cloneCounter = 0;
     public wolf()
     {
     }
@@ -65,157 +66,176 @@ public class wolf : MonoBehaviour {
     }
     private void FixedUpdate()
     {
-        if (updateWolf)
+        if (state != States.outOfGame)
         {
-            updateWolf = false;      
-            //get older
-            if (Mathf.Floor(timeDisplay.time) % 365 == 0 && (int)Mathf.Floor(timeDisplay.time) != lastYear)
+            if (updateWolf)
             {
-                lastYear = (int)Mathf.Floor(timeDisplay.time);
-                yearPassed = true;
-                if (state != States.outOfGame)
+                updateWolf = false;
+                //get older
+                if (Mathf.Floor(timeDisplay.time) % 365 == 0 && (int)Mathf.Floor(timeDisplay.time) != lastYear)
                 {
+                    lastYear = (int)Mathf.Floor(timeDisplay.time);
+                    yearPassed = true;
                     age++;
                 }
-            }
-            if (pregnant)
-            {
-                pregnancyTime++;               
-            }
-            switch (state)
-            {
-                case States.idl:                   
-                    feed();         
-                    //check if groups are set correct
-                    if(newGroup != null)
-                    {
-                        group = newGroup;
-                        if (!newGroup.currentGroup.Contains(gameObject))
+                if (pregnant)
+                {
+                    pregnancyTime++;
+                }
+                switch (state)
+                {
+                    case States.idl:
+                        feed();
+                        //check if groups are set correct
+                        if (newGroup != null)
                         {
-                            newGroup.currentGroup.Add(gameObject);
+                            group = newGroup;
+                            if (!newGroup.currentGroup.Contains(gameObject))
+                            {
+                                group.currentGroup.Remove(gameObject);
+                                newGroup.currentGroup.Add(gameObject);
+                            }
+                            newGroup = null;
+                            GetComponentInChildren<Renderer>().material.color = group.color;
                         }
-                        newGroup = null;
-                        GetComponentInChildren<Renderer>().material.color = group.color;
-                    }     
-                    //can't change territory if the wolf is pregnant
-                    if (!pregnant)
-                    {
-                        changeTerritoryDecision();
-                        //decide if wolf should get pregnant
-                        if (isMale == false && partner != null && lastTimePregnant+50 < (int)Mathf.Floor(timeDisplay.time))
+                        //can't change territory if the wolf is pregnant
+                        if (!pregnant)
                         {
-                            //if enough food
-                            if (territory.GetComponent<territory>().food > group.currentGroup.Count * 2)
+                            changeTerritoryDecision();
+                            //decide if wolf should get pregnant
+                            if (isMale == false && partner != null && lastTimePregnant + 300 < (int)Mathf.Floor(timeDisplay.time))
                             {
-                                //every day chance of 1% to get pregnant,20days chance of 18%, every year chance of 97.5%
-                                if (Random.Range(0, 100) == 0)
+                                //if enough food
+                                if (territory.GetComponent<territory>().food > group.currentGroup.Count * 2)
                                 {
-                                    pregnant = true;
-                                    father = partner;
-                                }
-                            }//not enough food
-                            else
-                            {
-                                //every day chance of 0.2% to get pregnant,20days chance of 4%, every year chance of 51.84%
-                                if (Random.Range(0, 500) == 0)
+                                    //higher chance to get pregnant if only two wolfs are left
+                                    if (group.currentGroup.Count == 2)
+                                    {
+                                        //every day chance of 4% to get pregnant,20days chance of 55%, every year chance of 99.99%
+                                        if (Random.Range(0, 25) == 0)
+                                        {
+                                            pregnant = true;
+                                            father = partner;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //every day chance of 1% to get pregnant,20days chance of 18%, every year chance of 97.5%
+                                        if (Random.Range(0, 100) == 0)
+                                        {
+                                            pregnant = true;
+                                            father = partner;
+                                        }
+                                    }
+                                }//not enough food
+                                else
                                 {
-                                    pregnant = true;
-                                    father = partner;
+                                    //every day chance of 0.2% to get pregnant,20days chance of 4%, every year chance of 51.84%
+                                    if (Random.Range(0, 500) == 0)
+                                    {
+                                        pregnant = true;
+                                        father = partner;
+                                    }
                                 }
                             }
                         }
-                    }else
-                    {
-                        //giving birth
-                        if(pregnancyTime > 65)
+                        else
                         {
-                            if(Random.Range(0, 3)==0){
-                                givBirth();
+                            //giving birth
+                            if (pregnancyTime > 65)
+                            {
+                                if (Random.Range(0, 3) == 0)
+                                {
+                                    givBirth();
+                                }
                             }
                         }
-                    }
-                    //on year change check if possible partner is in group which is not a brother or sister or parent and the wolf is not pregnant
-                    if (yearPassed && !pregnant)
-                    {
-                        findPartner();
-                    }
-                    //chance to die from sickness higher in the first 2 years
-                    if(age <= 2)
-                    {
-                        //   0.1369863% every day, 63.23727% chance to die in 2 years from sickness, slightly better chances if strengh is high
-                        if (Random.Range(0, 730+strengh*10) == 0)
+                        //on year change check if possible partner is in group which is not a brother or sister or parent and the wolf is not pregnant
+                        if (yearPassed && !pregnant)
                         {
-                            state = States.dead;
-                            Debug.Log(gameObject + " :death through sickness younger than 2");
+                            findPartner();
                         }
-                    }
-                    else
-                    {
-                        //   0.01369863% every day, 39.34% chance to die in 10 years from sickness
-                        if (Random.Range(0, 7300) == 0)
+                        //chance to die from sickness higher in the first 2 years
+                        if (age <= 2)
                         {
-                            state = States.dead;
-                            Debug.Log(gameObject + " :death through sickness older than 2");
+                            //   0.2% every day, 76.81% chance to die in 2 years from sickness,  better chances if strengh and hp are high
+                            if (Random.Range(0, 500 + strengh * 100 + hp * 10) == 0)
+                            {
+                                state = States.dead;
+                                Debug.Log(gameObject + " :death through sickness younger than 2");
+                            }
                         }
-                    }
-                    //chance to die from age
-                    if(age > 10)
-                    {
-                        //  0.2% every day, 51,84% every year, 88,83% every 3 years to die from sickness
-                        if (Random.Range(0, 500) == 0)
+                        else
                         {
-                            state = States.dead;
-                            Debug.Log(gameObject + " :death from age in the age of :"+age);
+                            //   0.01369863% every day, 39.34% chance to die in 10 years from sickness
+                            if (Random.Range(0, 7300 + strengh * 20 + hp * 10) == 0)
+                            {
+                                state = States.dead;
+                                Debug.Log(gameObject + " :death through sickness older than 2");
+                            }
                         }
-                    }
-                    break;
-                case States.changeTerritory:
-                    feed();
-                    GameObject[] possibleNewTerritory = GameObject.FindGameObjectsWithTag("territory");
-                    bool foundNewTerritory = false;
-                    while (!foundNewTerritory)
-                    {
-                        GameObject newTerritory = possibleNewTerritory[Random.Range(0, possibleNewTerritory.Length)];
-                        if (newTerritory != territory)
+                        //chance to die from age
+                        if (age > 10)
                         {
-                            foundNewTerritory = true;
-                            gameObject.GetComponent<navigation>().target = newTerritory.GetComponentInChildren<Transform>();
+                            //  0.2% every day, 51,84% every year, 88,83% every 3 years to die from age
+                            if (Random.Range(0, 500) == 0)
+                            {
+                                state = States.dead;
+                                Debug.Log(gameObject + " :death from age in the age of :" + age);
+                            }
                         }
-                    }
-                    state = States.snuffling;
-                    //change the group of this wolf and the other wolfs
-                    //navigation mesh go to new group
-                    break;
-                case States.fight:
-                    enemy = null;
-                    fight();
-                    break;
-                case States.snuffling:
-                    feed();
-                    //wait until wolf is in new territory
-                    if(newGroup != null)
-                    {
-                        makeContact();
-                    }
-                    break;
-                case States.dead:
-                    //Debug.Log(gameObject.name + " dieded");
-                    if (partner != null)
-                    {
-                        partner.GetComponent<wolf>().partner = null;
-                        partner = null;
-                    }
-                    group.currentGroup.Remove(gameObject);
-                    territory.GetComponent<territory>().wolfsInterritory.Remove(gameObject);
-                    Destroy(transform.Find("Cube").gameObject);
-                    state = States.outOfGame;
-                    hp = 0;
-                    //destroy object
-                    break;
-                case States.outOfGame:
-                    break;
+                        break;
+                    case States.changeTerritory:
+                        feed();
+                        GameObject[] possibleNewTerritory = GameObject.FindGameObjectsWithTag("territory");
+                        bool foundNewTerritory = false;
+                        while (!foundNewTerritory)
+                        {
+                            GameObject newTerritory = possibleNewTerritory[Random.Range(0, possibleNewTerritory.Length)];
+                            if (newTerritory != territory)
+                            {
+                                foundNewTerritory = true;
+                                gameObject.GetComponent<navigation>().target = newTerritory.GetComponentInChildren<Transform>();
+                            }
+                        }
+                        state = States.snuffling;
+                        //change the group of this wolf and the other wolfs
+                        //navigation mesh go to new group
+                        break;
+                    case States.fight:
+                        enemy = null;
+                        fight();
+                        break;
+                    case States.snuffling:
+                        feed();
+                        //wait until wolf is in new territory
+                        if (newGroup != null)
+                        {
+                            makeContact();
+                        }
+                        break;
+                    case States.dead:
+                        //Debug.Log(gameObject.name + " dieded");
+                        if (partner != null)
+                        {
+                            partner.GetComponent<wolf>().partner = null;
+                            partner = null;
+                        }
+                        while (group.currentGroup.Contains(gameObject))
+                        {
+                            group.currentGroup.Remove(gameObject);
+                        }
+                        Destroy(transform.Find("Cube").gameObject);
+                        territory.GetComponent<territory>().wolfsInterritory.Remove(gameObject);
+                        state = States.outOfGame;
+                        hp = 0;
+                        //destroy object
+                        break;
+                    case States.outOfGame:
+                        break;
+                }
+                yearPassed = false;
             }
-            yearPassed = false;
         }
     }
 
@@ -227,11 +247,13 @@ public class wolf : MonoBehaviour {
         int childCount = Random.Range(1, 7);
         for (int i = 0; i < childCount; i++)
         {
+            cloneCounter++;
             GameObject newWolf = Instantiate(prefab, new Vector3(transform.position.x + Random.Range(0, 10), 0,
                 transform.position.z + Random.Range(0, 10)), Quaternion.identity);
+            newWolf.name = newWolf.name + " " + cloneCounter;
             wolf wolfScript = newWolf.GetComponent<wolf>();
-            wolfScript.hp = 20;
-            wolfScript.maxHp = 20;
+            wolfScript.hp = 10;
+            wolfScript.maxHp = 10;
             wolfScript.isMale = Random.Range(0, 2) == 1;
             wolfScript.age = 0;
             wolfScript.hunger = 0;            
@@ -243,7 +265,6 @@ public class wolf : MonoBehaviour {
             wolfScript.group = group;
             group.currentGroup.Add(newWolf);
             wolfScript.territory = territory;
-            territory.GetComponent<territory>().wolfsInterritory.Add(newWolf);
             newWolf.GetComponent<navigation>().target = territory.GetComponent<territory>().GetComponentInChildren<Transform>();
             wolfScript.newGroup = null;
             wolfScript.children = null;
@@ -254,10 +275,26 @@ public class wolf : MonoBehaviour {
             wolfScript.children = new List<GameObject>();
             wolfScript.newborn = true;
             //calculate new strengh
-            int strenghRandomness = Random.Range(0, 10) - 5;
-            if ((strengh + father.GetComponent<wolf>().strengh) / 2 + strenghRandomness > 0)
+            int strenghRandomness = Random.Range(0, 11) - 5;
+            int fatherMulti = father.GetComponent<wolf>().strengh > strengh?2:1;
+            int motherMulti = fatherMulti == 2 ? 1 : 2;
+            if ((strengh * motherMulti + father.GetComponent<wolf>().strengh * fatherMulti) / 3 + strenghRandomness > 0)
             {
-                wolfScript.strengh = (strengh + father.GetComponent<wolf>().strengh) / 2 + strenghRandomness;
+                wolfScript.strengh = (strengh * motherMulti + father.GetComponent<wolf>().strengh * fatherMulti) / 3 + strenghRandomness;
+            }
+            //Debug.Log("mother:"+strengh+"    father:"+father.GetComponent<wolf>().strengh+"    new:"+((strengh * motherMulti + father.GetComponent<wolf>().strengh * fatherMulti) / 3 + strenghRandomness));
+            //calculate new aggression
+            int aggressionRandomness = Random.Range(0, 5) - 2;
+            if ((aggression + father.GetComponent<wolf>().aggression) / 2 + aggressionRandomness > 0)
+            {
+                wolfScript.aggression = (aggression + father.GetComponent<wolf>().strengh) / 2 + aggressionRandomness;
+            }
+            //calculate new hp
+            int maxHpRandomness = Random.Range(0, 7) - 3;
+            if ((maxHp + father.GetComponent<wolf>().maxHp) / 2 + maxHpRandomness > 10)
+            {
+                wolfScript.maxHp = (maxHp + father.GetComponent<wolf>().maxHp) / 2 + maxHpRandomness;
+                wolfScript.hp = wolfScript.maxHp;
             }
             //instantiate new wolf
             newWolf.GetComponentInChildren<Renderer>().material.color = group.color;
@@ -398,8 +435,12 @@ public class wolf : MonoBehaviour {
         {
             changeGroup();
         }
-        else
+        else if (newGroup.currentGroup.Count == 1 && newGroup.currentGroup[0].GetComponent<wolf>().isMale != isMale)
         {
+            changeGroup();
+        }
+        else
+        {            
             //determin the aggression of the new group  
             int groupAggressionLevel = 0;
             foreach (GameObject wolfAgressor in newGroup.currentGroup)
@@ -413,10 +454,15 @@ public class wolf : MonoBehaviour {
             {
                 groupAggressionLevel *= 5;
             }
+            int foodFactor = 0;
+            if(newGroup.currentGroup.Count * 10 < territory.GetComponent<territory>().food)
+            {
+                foodFactor = 15;
+            }
             //when the wolf is young his chances to get a place in the new gorup are higher
             if (age <= 3)
             {
-                if (Random.Range(0, 100 + groupAggressionLevel) <= 75)
+                if (Random.Range(0, 100 + groupAggressionLevel - foodFactor) <= 75)
                 {
                     changeGroup();
                 }
@@ -425,9 +471,9 @@ public class wolf : MonoBehaviour {
                     state = States.fight;
                 }
             }
-            else if (age <= 7)
+            else if (age <= 8)
             {
-                if (Random.Range(0, 100 + groupAggressionLevel) <= 50)
+                if (Random.Range(0, 100 + groupAggressionLevel - foodFactor) <= 50)
                 {
                     changeGroup();
                 }
@@ -438,7 +484,7 @@ public class wolf : MonoBehaviour {
             }
             else
             {
-                if (Random.Range(0, 100 + groupAggressionLevel) <= 25)
+                if (Random.Range(0, 100 + groupAggressionLevel - foodFactor) <= 25)
                 {
                     changeGroup();
                 }
@@ -508,7 +554,28 @@ public class wolf : MonoBehaviour {
                             }                            
                             if (!skip)
                             {
-                                if (Random.Range(0, 2) == 1)
+                                //if only 2 wolfs are left they form a pair
+                                if(group.currentGroup.Count == 2)
+                                {
+                                    wolfScript.partner = gameObject;
+                                    gameObject.GetComponent<wolf>().partner = w;
+                                }
+                                //100%  chance if the partner is strong
+                                else if (!isMale && wolfScript.strengh > strengh)
+                                {
+                                    wolfScript.partner = gameObject;
+                                    gameObject.GetComponent<wolf>().partner = w;
+                                }
+                                else if (isMale && wolfScript.strengh + 2 >= strengh)
+                                {
+                                    if (Random.Range(0, 2) == 1)
+                                    {
+                                        wolfScript.partner = gameObject;
+                                        gameObject.GetComponent<wolf>().partner = w;
+                                        // Debug.Log(gameObject.name + "  possiblePartner: " + w.name);
+                                    }
+                                }
+                                else if (Random.Range(0, 7) == 1)
                                 {
                                     wolfScript.partner = gameObject;
                                     gameObject.GetComponent<wolf>().partner = w;
