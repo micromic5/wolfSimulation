@@ -299,6 +299,7 @@ public class wolf : MonoBehaviour {
             //instantiate new wolf
             newWolf.GetComponentInChildren<Renderer>().material.color = group.color;
             children.Add(newWolf);
+            father.GetComponent<wolf>().children.Add(newWolf);
         }
         father = null;
     }
