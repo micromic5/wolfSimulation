@@ -24,7 +24,10 @@ public class territory : MonoBehaviour {
         {
             if (comp.tag == "Wolf" && comp.GetComponent<wolf>().state != wolf.States.outOfGame)
             {
-                if(startTime && timeDisplay.time - timeStart > 10)
+                comp.GetComponent<wolf>().territory = gameObject;
+                wolfsInterritory.Add(comp.gameObject);
+                comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
+                if (startTime && timeDisplay.time - timeStart > 10)
                 {
                     startTime = false;
                 }
@@ -34,11 +37,8 @@ public class territory : MonoBehaviour {
                   /*  if (comp.GetComponent<wolf>().age > 0)
                     {*/
                         comp.GetComponent<wolf>().newGroup = group;
-                  //  }
-                    comp.GetComponent<navigation>().target = GetComponentInChildren<Transform>();
-                }
-                comp.GetComponent<wolf>().territory = gameObject;                
-                wolfsInterritory.Add(comp.gameObject);
+                  //  }                    
+                }                
             }
         }
     }
@@ -51,6 +51,7 @@ public class territory : MonoBehaviour {
             {
 
                 wolfsInterritory.Remove(comp.gameObject);
+                comp.gameObject.GetComponent<wolf>().territory = null;
             }
         }
     }

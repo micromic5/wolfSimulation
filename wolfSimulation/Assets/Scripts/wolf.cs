@@ -209,7 +209,7 @@ public class wolf : MonoBehaviour {
                     case States.snuffling:
                         feed();
                         //wait until wolf is in new territory
-                        if (newGroup != null)
+                        if (newGroup != null && territory != null)
                         {
                             makeContact();
                         }
@@ -226,7 +226,10 @@ public class wolf : MonoBehaviour {
                             group.currentGroup.Remove(gameObject);
                         }
                         Destroy(transform.Find("Cube").gameObject);
-                        territory.GetComponent<territory>().wolfsInterritory.Remove(gameObject);
+                        if (territory != null)
+                        {
+                            territory.GetComponent<territory>().wolfsInterritory.Remove(gameObject);
+                        }
                         state = States.outOfGame;
                         hp = 0;
                         //destroy object
@@ -594,10 +597,10 @@ public class wolf : MonoBehaviour {
     //checks if the territory still has food and if its enough for all the wolfs in the territory
     private void feed()
     {
-        if ((territory.GetComponent<territory>().food > 0 &&
+        if (territory != null && ((territory.GetComponent<territory>().food > 0 &&
                         territory.GetComponent<territory>().food > territory.GetComponent<territory>().wolfsInterritory.Count)
                         || territory.GetComponent<territory>().regenerationRate >= territory.GetComponent<territory>().wolfsInterritory.Count
-                        )
+                        ))
         {
             if (hp < maxHp)
             {
